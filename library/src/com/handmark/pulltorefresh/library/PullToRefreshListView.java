@@ -256,6 +256,8 @@ public class PullToRefreshListView extends PullToRefreshAdapterViewBase<ListView
 	@TargetApi(9)
 	final class InternalListViewSDK9 extends InternalListView {
 
+		public final static int MAX_SCROLLER_DISTANCE = 30;
+		
 		public InternalListViewSDK9(Context context, AttributeSet attrs) {
 			super(context, attrs);
 		}
@@ -263,7 +265,10 @@ public class PullToRefreshListView extends PullToRefreshAdapterViewBase<ListView
 		@Override
 		protected boolean overScrollBy(int deltaX, int deltaY, int scrollX, int scrollY, int scrollRangeX,
 				int scrollRangeY, int maxOverScrollX, int maxOverScrollY, boolean isTouchEvent) {
-
+			
+			//FIXME 减少弹性拉伸量
+			deltaY = Math.max(-MAX_SCROLLER_DISTANCE, Math.min(MAX_SCROLLER_DISTANCE, deltaY));
+			
 			final boolean returnValue = super.overScrollBy(deltaX, deltaY, scrollX, scrollY, scrollRangeX,
 					scrollRangeY, maxOverScrollX, maxOverScrollY, isTouchEvent);
 

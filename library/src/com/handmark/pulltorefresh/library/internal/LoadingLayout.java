@@ -350,12 +350,7 @@ public abstract class LoadingLayout extends FrameLayout implements ILoadingLayou
 				mSubHeaderText.setVisibility(View.GONE);
 			} else {
 				mSubHeaderText.setText(label);
-
-				// Only set it to Visible if we're GONE, otherwise VISIBLE will
-				// be set soon
-				if (View.GONE == mSubHeaderText.getVisibility()) {
-					mSubHeaderText.setVisibility(View.VISIBLE);
-				}
+				mSubHeaderText.setVisibility(View.VISIBLE);
 			}
 		}
 	}
