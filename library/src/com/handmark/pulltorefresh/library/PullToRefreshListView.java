@@ -266,7 +266,7 @@ public class PullToRefreshListView extends PullToRefreshAdapterViewBase<ListView
 		protected boolean overScrollBy(int deltaX, int deltaY, int scrollX, int scrollY, int scrollRangeX,
 				int scrollRangeY, int maxOverScrollX, int maxOverScrollY, boolean isTouchEvent) {
 			
-			//FIXME 减少弹性拉伸量
+			//FIXME 在快速滚动时，到达尽头时产生的弹性拉伸量。这里限制一下大小，弹得太远，难看。
 			deltaY = Math.max(-MAX_SCROLLER_DISTANCE, Math.min(MAX_SCROLLER_DISTANCE, deltaY));
 			
 			final boolean returnValue = super.overScrollBy(deltaX, deltaY, scrollX, scrollY, scrollRangeX,
@@ -303,6 +303,7 @@ public class PullToRefreshListView extends PullToRefreshAdapterViewBase<ListView
 
 		@Override
 		public boolean dispatchTouchEvent(MotionEvent ev) {
+			
 			/**
 			 * This is a bit hacky, but Samsung's ListView has got a bug in it
 			 * when using Header/Footer Views and the list is empty. This masks

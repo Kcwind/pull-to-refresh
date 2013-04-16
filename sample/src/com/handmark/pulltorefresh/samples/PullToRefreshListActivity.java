@@ -27,6 +27,8 @@ import android.view.ContextMenu.ContextMenuInfo;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
+import android.widget.AbsListView;
+import android.widget.AbsListView.OnScrollListener;
 import android.widget.AdapterView.AdapterContextMenuInfo;
 import android.widget.ArrayAdapter;
 import android.widget.ListView;
@@ -105,6 +107,25 @@ public final class PullToRefreshListActivity extends ListActivity {
 		// You can also just use setListAdapter(mAdapter) or
 		// mPullRefreshListView.setAdapter(mAdapter)
 		actualListView.setAdapter(mAdapter);
+		
+//		mPullRefreshListView.setOnHeaderScorllListener(new PullToRefreshBase.OnHeaderScorllListener() {
+//			@Override
+//			public void onHeaderScrolling(int orientation, int scrollValue) {
+//				System.out.println(">>> 拉动头部："+scrollValue);
+//			}
+//		});
+//		mPullRefreshListView.setOnScrollListener(new OnScrollListener() {
+//			
+//			@Override
+//			public void onScrollStateChanged(AbsListView view, int scrollState) {
+//				
+//			}
+//			
+//			@Override
+//			public void onScroll(AbsListView view, int firstVisibleItem, int visibleItemCount, int totalItemCount) {
+//				System.out.println(">>> 显示条目："+firstVisibleItem);
+//			}
+//		});
 	}
 
 	private class GetDataTask extends AsyncTask<Void, Void, String[]> {
