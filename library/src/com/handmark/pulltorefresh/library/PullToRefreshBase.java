@@ -942,7 +942,12 @@ public abstract class PullToRefreshBase<T extends View> extends LinearLayout imp
 	public interface OnHeaderScorllListener{
 		int ORIENTATION_H = 0;
 		int ORIENTATION_V = 1;
+		
+		//当前滚动的距离和方向
 		void onHeaderScrolling(int orientation, int scrollValue);
+		
+		//是否允许Header拉伸
+		boolean allowHeaderScrolling();
 	}
 	
 	private OnHeaderScorllListener onHeaderScorllListener;
@@ -962,6 +967,8 @@ public abstract class PullToRefreshBase<T extends View> extends LinearLayout imp
 		if (DEBUG) {
 			Log.d(LOG_TAG, "setHeaderScroll: " + value);
 		}
+		
+		if(onHeaderScorllListener != null && !onHeaderScorllListener.allowHeaderScrolling()) return;
 		
 		// Clamp value to with pull scroll range
 		final int maximumPullScroll = getMaximumPullScroll();
@@ -999,7 +1006,6 @@ public abstract class PullToRefreshBase<T extends View> extends LinearLayout imp
 					onHeaderScorllListener.onHeaderScrolling(OnHeaderScorllListener.ORIENTATION_H,value);
 				}
 				scrollTo(value, 0);
-				
 				break;
 		}
 	}
