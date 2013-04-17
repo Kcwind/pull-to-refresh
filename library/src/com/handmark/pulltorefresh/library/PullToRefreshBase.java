@@ -98,6 +98,55 @@ public abstract class PullToRefreshBase<T extends View> extends LinearLayout imp
 	private OnPullEventListener<T> mOnPullEventListener;
 
 	private SmoothScrollRunnable mCurrentSmoothScrollRunnable;
+	
+	// ===========================================================
+	// TODO mark : 滚动中断
+	// ===========================================================
+	
+	public interface ScorllInterruptor{
+		
+		int PULLING_ORIENTATION_HORIZONTAL = 0;
+		int PULLING_ORIENTATION_VERTICAL = 1;
+		
+		/**
+		 * 列表LoadingHeader被拉动
+		 * @param orientation
+		 * @param scrollValue
+		 */
+		void onHeaderPulling(int orientation, int scrollValue);
+		
+		/**
+		 * 是否中断Header滚动
+		 * @return
+		 */
+		boolean isInterruptHeaderScorlling();
+		
+		/**
+		 * 列表开始从顶部向下滚动
+		 */
+		void onListScrollingFromTop();
+		
+		/**
+		 * 列表开始从底部向上滚动
+		 */
+		void onListScrollingFromBottom();
+		
+		/**
+		 * 是否中断列表滚动
+		 * @return
+		 */
+		boolean isInterruptListScrolling();
+	}
+	
+	private ScorllInterruptor listScorllInterruptor;
+	
+	/**
+	 * 添加滚动中断处理接口
+	 * @param listener
+	 */
+	public void setScorllingIntertuptor(ScorllInterruptor listener){
+		listScorllInterruptor = listener;
+	}
 
 	// ===========================================================
 	// Constructors
@@ -222,11 +271,16 @@ public abstract class PullToRefreshBase<T extends View> extends LinearLayout imp
 		return mScrollingWhileRefreshingEnabled;
 	}
 	
-	private float lastPullY;
-
 	@Override
 	public final boolean onInterceptTouchEvent(MotionEvent event) {
 
+//		if(isReadyForPull() && onListScorllListener != null){
+//			onListScorllListener.onListStartScroll();
+//			if( !onListScorllListener.enableListScroll() ){
+//				return true;
+//			}
+//		}
+		
 		if (!isPullToRefreshEnabled()) {
 			return false;
 		}
@@ -251,9 +305,10 @@ public abstract class PullToRefreshBase<T extends View> extends LinearLayout imp
 				}
 				
 				if (isReadyForPull()) {
+					
 					final float y = event.getY(), x = event.getX();
 					final float diff, oppositeDiff, absDiff;
-
+					
 					// We need to use the correct values, based on scroll
 					// direction
 					switch (getPullToRefreshScrollDirection()) {
@@ -268,6 +323,18 @@ public abstract class PullToRefreshBase<T extends View> extends LinearLayout imp
 							break;
 					}
 					absDiff = Math.abs(diff);
+					
+					// TODO mark : 添加滚动中断
+					if( listScorllInterruptor != null ){
+						if(diff < 0){
+							listScorllInterruptor.onListScrollingFromTop();
+						}else if(diff > 0){
+							listScorllInterruptor.onListScrollingFromBottom();
+						}
+						if( listScorllInterruptor.isInterruptListScrolling() ){
+							return true;
+						}
+					}
 					
 					if (absDiff > mTouchSlop && (!mFilterTouchEvents || absDiff > Math.abs(oppositeDiff))) {
 						if (mMode.showHeaderLoadingLayout() && diff >= 1f && isReadyForPullStart()) {
@@ -308,12 +375,10 @@ public abstract class PullToRefreshBase<T extends View> extends LinearLayout imp
 			setState(State.RESET);
 		}
 	}
-	
-	
 
 	@Override
 	public final boolean onTouchEvent(MotionEvent event) {
-
+		
 		if (!isPullToRefreshEnabled()) {
 			return false;
 		}
@@ -937,25 +1002,6 @@ public abstract class PullToRefreshBase<T extends View> extends LinearLayout imp
 		}
 	}
 	
-	// FIXME 添加监听Header拉伸的事件处理接口
-	
-	public interface OnHeaderScorllListener{
-		int ORIENTATION_H = 0;
-		int ORIENTATION_V = 1;
-		
-		//当前滚动的距离和方向
-		void onHeaderScrolling(int orientation, int scrollValue);
-		
-		//是否允许Header拉伸
-		boolean allowHeaderScrolling();
-	}
-	
-	private OnHeaderScorllListener onHeaderScorllListener;
-	
-	public void setOnHeaderScorllListener(OnHeaderScorllListener listener){
-		onHeaderScorllListener = listener;
-	}
-
 	/**
 	 * Helper method which just calls scrollTo() in the correct scrolling
 	 * direction.
@@ -964,11 +1010,11 @@ public abstract class PullToRefreshBase<T extends View> extends LinearLayout imp
 	 */
 	protected final void setHeaderScroll(int value) {
 		
-		if (DEBUG) {
-			Log.d(LOG_TAG, "setHeaderScroll: " + value);
+		// TODO mark : 限制滚动惯性产生的Header拉伸
+		if(listScorllInterruptor != null){
+			listScorllInterruptor.onHeaderPulling(ScorllInterruptor.PULLING_ORIENTATION_HORIZONTAL,value);
+			if( listScorllInterruptor.isInterruptHeaderScorlling() ) return;
 		}
-		
-		if(onHeaderScorllListener != null && !onHeaderScorllListener.allowHeaderScrolling()) return;
 		
 		// Clamp value to with pull scroll range
 		final int maximumPullScroll = getMaximumPullScroll();
@@ -996,15 +1042,9 @@ public abstract class PullToRefreshBase<T extends View> extends LinearLayout imp
 
 		switch (getPullToRefreshScrollDirection()) {
 			case VERTICAL:
-				if(onHeaderScorllListener != null){
-					onHeaderScorllListener.onHeaderScrolling(OnHeaderScorllListener.ORIENTATION_V,value);
-				}
 				scrollTo(0, value);
 				break;
 			case HORIZONTAL:
-				if(onHeaderScorllListener != null){
-					onHeaderScorllListener.onHeaderScrolling(OnHeaderScorllListener.ORIENTATION_H,value);
-				}
 				scrollTo(value, 0);
 				break;
 		}
@@ -1187,6 +1227,7 @@ public abstract class PullToRefreshBase<T extends View> extends LinearLayout imp
 	 *         change
 	 */
 	private void pullEvent() {
+		
 		final int newScrollValue;
 		final int itemDimension;
 		final float initialMotionValue, lastMotionValue;
@@ -1214,9 +1255,14 @@ public abstract class PullToRefreshBase<T extends View> extends LinearLayout imp
 				itemDimension = getHeaderSize();
 				break;
 		}
-
+		
 		setHeaderScroll(newScrollValue);
-
+		
+		// TODO  mark 限制手动产生的Header强制拉伸距离
+		if(listScorllInterruptor != null && !listScorllInterruptor.isInterruptHeaderScorlling()){
+			return;
+		}
+		
 		if (newScrollValue != 0 && !isRefreshing()) {
 			float scale = Math.abs(newScrollValue) / (float) itemDimension;
 			switch (mCurrentMode) {

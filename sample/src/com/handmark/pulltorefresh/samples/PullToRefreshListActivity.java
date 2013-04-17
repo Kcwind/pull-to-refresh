@@ -27,8 +27,6 @@ import android.view.ContextMenu.ContextMenuInfo;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
-import android.widget.AbsListView;
-import android.widget.AbsListView.OnScrollListener;
 import android.widget.AdapterView.AdapterContextMenuInfo;
 import android.widget.ArrayAdapter;
 import android.widget.ListView;
@@ -38,6 +36,7 @@ import com.handmark.pulltorefresh.library.PullToRefreshBase;
 import com.handmark.pulltorefresh.library.PullToRefreshBase.Mode;
 import com.handmark.pulltorefresh.library.PullToRefreshBase.OnLastItemVisibleListener;
 import com.handmark.pulltorefresh.library.PullToRefreshBase.OnRefreshListener;
+import com.handmark.pulltorefresh.library.PullToRefreshBase.ScorllInterruptor;
 import com.handmark.pulltorefresh.library.PullToRefreshBase.State;
 import com.handmark.pulltorefresh.library.PullToRefreshListView;
 import com.handmark.pulltorefresh.library.extras.SoundPullEventListener;
@@ -108,24 +107,35 @@ public final class PullToRefreshListActivity extends ListActivity {
 		// mPullRefreshListView.setAdapter(mAdapter)
 		actualListView.setAdapter(mAdapter);
 		
-//		mPullRefreshListView.setOnHeaderScorllListener(new PullToRefreshBase.OnHeaderScorllListener() {
-//			@Override
-//			public void onHeaderScrolling(int orientation, int scrollValue) {
-//				System.out.println(">>> 拉动头部："+scrollValue);
-//			}
-//		});
-//		mPullRefreshListView.setOnScrollListener(new OnScrollListener() {
-//			
-//			@Override
-//			public void onScrollStateChanged(AbsListView view, int scrollState) {
-//				
-//			}
-//			
-//			@Override
-//			public void onScroll(AbsListView view, int firstVisibleItem, int visibleItemCount, int totalItemCount) {
-//				System.out.println(">>> 显示条目："+firstVisibleItem);
-//			}
-//		});
+		// 添加中断处理
+		mPullRefreshListView.setScorllingIntertuptor(new ScorllInterruptor(){
+
+			@Override
+			public void onHeaderPulling(int orientation, int scrollValue) {
+				System.out.println(">>> 拉动头部："+scrollValue);
+			}
+
+			@Override
+			public boolean isInterruptHeaderScorlling() {
+				return false;
+			}
+
+			@Override
+			public void onListScrollingFromTop() {
+				System.out.println(">>> 列表开始向下滚动...");
+			}
+
+			@Override
+			public void onListScrollingFromBottom() {
+				System.out.println(">>> 列表开始向上滚动...");
+			}
+
+			@Override
+			public boolean isInterruptListScrolling() {
+				return false;
+			}
+			
+		});
 	}
 
 	private class GetDataTask extends AsyncTask<Void, Void, String[]> {

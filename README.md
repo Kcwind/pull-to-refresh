@@ -4,6 +4,98 @@
 
 # Pull To Refresh Views for Android
 
+## 本分支修改
+
+* 添加滚动中断
+* 列表快速滚动到达边缘时，限制回弹的最大距离。
+
+### 滚动中断
+
+添加了一个接口，主要用于以下场景：
+
+* 列表滚动开始时，隐藏列表上面的View。如图，titleView在列表开始向下滚动时，隐藏起来以留下更多空间给列表。列表再滚回到顶部时，下拉可以显示titleView。
+
+    -----------
+    |  title  |
+    | ------- |
+    |-1-------|
+    |-2-------|
+    |-3-------|
+    |-4-------|
+    |-5-------|
+
+处理中断的接口如下代码。修改的位置在PullToRefreshBase中，代码位置都被 TODO 标识。
+
+```java
+
+    /**
+     * 列表LoadingHeader被拉动
+     * @param orientation
+     * @param scrollValue
+     */
+    void onHeaderPulling(int orientation, int scrollValue);
+    
+    /**
+     * 是否中断Header滚动
+     * @return
+     */
+    boolean isInterruptHeaderScorlling();
+    
+    /**
+     * 列表开始从顶部向下滚动
+     */
+    void onListScrollingFromTop();
+    
+    /**
+     * 列表开始从底部向上滚动
+     */
+    void onListScrollingFromBottom();
+    
+    /**
+     * 是否中断列表滚动
+     * @return
+     */
+    boolean isInterruptListScrolling();
+
+```
+
+中断使用方法
+
+```java
+
+    // 添加中断处理
+    mPullRefreshListView.setScorllingIntertuptor(new ScorllInterruptor(){
+
+        @Override
+        public void onHeaderPulling(int orientation, int scrollValue) {
+            System.out.println(">>> 拉动头部："+scrollValue);
+        }
+
+        @Override
+        public boolean isInterruptHeaderScorlling() {
+            return false;
+        }
+
+        @Override
+        public void onListScrollingFromTop() {
+            System.out.println(">>> 列表开始向下滚动...");
+        }
+
+        @Override
+        public void onListScrollingFromBottom() {
+            System.out.println(">>> 列表开始向上滚动...");
+        }
+
+        @Override
+        public boolean isInterruptListScrolling() {
+            return false;
+        }
+        
+    });
+        
+```
+
+
 ![Screenshot](https://github.com/chrisbanes/Android-PullToRefresh/raw/master/header_graphic.png)
 
 This project aims to provide a reusable Pull to Refresh widget for Android. It was originally based on Johan Nilsson's [library](https://github.com/johannilsson/android-pulltorefresh) (mainly for graphics, strings and animations), but these have been replaced since.
