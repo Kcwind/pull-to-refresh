@@ -3,6 +3,14 @@
     android:layout_width="fill_parent"
     android:layout_height="fill_parent"
     android:orientation="vertical" >
+    
+    <TextView
+      android:id="@+id/title_layout"
+      android:layout_width="wrap_content"
+      android:layout_height="wrap_content"
+      android:background="#ff6191"
+      android:text="This project aims to provide a reusable Pull to Refresh widget for Android. It was originally based on Johan Nilsson's library (mainly for graphics, strings and animations), but these have been replaced since."
+      android:textAppearance="?android:attr/textAppearanceLarge" />
 
     <!-- The PullToRefreshListView replaces a standard ListView widget. -->
 
@@ -21,6 +29,14 @@
         android:smoothScrollbar="true"
         ptr:ptrAnimationStyle="flip"
         ptr:ptrHeaderBackground="#FFF8F8F8"
-        ptr:ptrMode="both" />
+        ptr:ptrMode="both" >
+
+    </com.handmark.pulltorefresh.library.PullToRefreshListView>
+    
+    <View
+        android:id="@+id/for_animation"
+        android:layout_width="0dp"
+        android:layout_height="0dp"
+        android:visibility="invisible" />
 
 </LinearLayout>

@@ -21,12 +21,17 @@ import java.util.LinkedList;
 import android.app.ListActivity;
 import android.os.AsyncTask;
 import android.os.Bundle;
+import android.os.Handler;
 import android.text.format.DateUtils;
 import android.view.ContextMenu;
 import android.view.ContextMenu.ContextMenuInfo;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
+import android.view.animation.Animation;
+import android.view.animation.Animation.AnimationListener;
+import android.view.animation.DecelerateInterpolator;
+import android.widget.AbsListView;
 import android.widget.AdapterView.AdapterContextMenuInfo;
 import android.widget.ArrayAdapter;
 import android.widget.ListView;
@@ -36,10 +41,10 @@ import com.handmark.pulltorefresh.library.PullToRefreshBase;
 import com.handmark.pulltorefresh.library.PullToRefreshBase.Mode;
 import com.handmark.pulltorefresh.library.PullToRefreshBase.OnLastItemVisibleListener;
 import com.handmark.pulltorefresh.library.PullToRefreshBase.OnRefreshListener;
-import com.handmark.pulltorefresh.library.PullToRefreshBase.ScorllInterruptor;
 import com.handmark.pulltorefresh.library.PullToRefreshBase.State;
 import com.handmark.pulltorefresh.library.PullToRefreshListView;
 import com.handmark.pulltorefresh.library.extras.SoundPullEventListener;
+import com.handmark.pulltorefresh.samples.support.TranslateAnimation;
 
 public final class PullToRefreshListActivity extends ListActivity {
 
@@ -58,6 +63,8 @@ public final class PullToRefreshListActivity extends ListActivity {
 		super.onCreate(savedInstanceState);
 		setContentView(R.layout.activity_ptr_list);
 
+		titleLayout = findViewById(R.id.title_layout);
+		
 		mPullRefreshListView = (PullToRefreshListView) findViewById(R.id.pull_refresh_list);
 
 		// Set a listener to be invoked when the list should be refreshed.
@@ -107,36 +114,111 @@ public final class PullToRefreshListActivity extends ListActivity {
 		// mPullRefreshListView.setAdapter(mAdapter)
 		actualListView.setAdapter(mAdapter);
 		
-		// 添加中断处理
-		mPullRefreshListView.setScorllingIntertuptor(new ScorllInterruptor(){
-
+		// 绑定动画
+		setupAnimation();
+		mPullRefreshListView.setOnHeaderPullingListener(listener);
+		mPullRefreshListView.getRefreshableView().setOnScrollListener(new AbsListView.OnScrollListener() {
+			private int firstVisibleItem;
 			@Override
-			public void onHeaderPulling(int orientation, int scrollValue) {
-				System.out.println(">>> 拉动头部："+scrollValue);
-			}
-
-			@Override
-			public boolean isInterruptHeaderScorlling() {
-				return false;
-			}
-
-			@Override
-			public void onListScrollingFromTop() {
-				System.out.println(">>> 列表开始向下滚动...");
-			}
-
-			@Override
-			public void onListScrollingFromBottom() {
-				System.out.println(">>> 列表开始向上滚动...");
-			}
-
-			@Override
-			public boolean isInterruptListScrolling() {
-				return false;
+			public void onScrollStateChanged(AbsListView view, int scrollState) {
+				// 当列表滚动停止，并且当前可见条目不是第一条的话，运行动画。
+				if(SCROLL_STATE_IDLE == scrollState && firstVisibleItem > 0){
+					long currentTime = System.currentTimeMillis();
+					long diff = currentTime - lastDelayTime;
+					if(!mallLayoutHasHide && !isAnimationPlaying && diff >= ANIMATIONS_MIN_DELAY){
+						forAnimation.startAnimation(hideAnimation);
+						lastDelayTime = System.currentTimeMillis();
+						mallLayoutHasHide = true;
+					}
+				}
 			}
 			
+			@Override
+			public void onScroll(AbsListView view, int firstVisibleItem,int visibleItemCount, int totalItemCount) {
+				this.firstVisibleItem = firstVisibleItem;
+			}
 		});
 	}
+	
+	//////////////////////
+	
+	static final int ANIMATION_DURATION = 100;
+	static final int ANIMATIONS_MIN_DELAY = 1200;
+	static final int LAYOUT_HEIGHT = 150;
+	
+	private View titleLayout;
+	private View forAnimation;
+	private boolean mallLayoutHasHide = false;
+	private boolean isAnimationPlaying = false;
+	private TranslateAnimation hideAnimation;
+	private TranslateAnimation showAnimation;
+	private long lastDelayTime;
+	
+	private AnimationListener animationListener = new AnimationListener() {
+		@Override
+		public void onAnimationStart(Animation animation) {
+			isAnimationPlaying = true;
+		}
+		@Override
+		public void onAnimationRepeat(Animation animation) { }
+		@Override
+		public void onAnimationEnd(Animation animation) {
+			isAnimationPlaying = false;
+		}
+	};
+	
+	private PullToRefreshBase.HeaderPullingListener listener = new PullToRefreshBase.HeaderPullingListener(){
+		
+		static final int MIN_TIGGER_DISTANCE = 30;
+		
+		@Override
+		public void onHeaderPulling(int orientation, int scrollDistance) {
+			//不要一下子执行，当拉伸距离达到一定距离后，再执行自动弹出效果。
+			if(Math.abs(scrollDistance) < MIN_TIGGER_DISTANCE) return;
+			long currentTime = System.currentTimeMillis();
+			long diff = currentTime - lastDelayTime;
+			if(mallLayoutHasHide && !isAnimationPlaying && diff >= ANIMATIONS_MIN_DELAY){
+				forAnimation.startAnimation(showAnimation);
+				lastDelayTime = System.currentTimeMillis();
+				mallLayoutHasHide = false;
+			}
+		}
+		
+	};
+	
+	private void setupAnimation(){
+		forAnimation = findViewById(R.id.for_animation);
+		hideAnimation = new TranslateAnimation(0, 0, 0, -LAYOUT_HEIGHT);
+		hideAnimation.setDuration(ANIMATION_DURATION);
+		hideAnimation.setInterpolator(new DecelerateInterpolator());
+		hideAnimation.setOnTransformListener(new TranslateAnimation.OnTransformListener() {
+			@Override
+			public void onTransform(float dy) {
+				int offset = (int) dy;
+				onAnimationTransfrom(offset);
+			}
+		});
+		
+		showAnimation = new TranslateAnimation(0, 0, -LAYOUT_HEIGHT, 0);
+		showAnimation.setDuration(ANIMATION_DURATION);
+		showAnimation.setInterpolator(new DecelerateInterpolator());
+		showAnimation.setOnTransformListener(new TranslateAnimation.OnTransformListener() {
+			@Override
+			public void onTransform(float dy) {
+				int offset = (int) dy;
+				onAnimationTransfrom(offset);
+			}
+		});
+		
+		showAnimation.setAnimationListener(animationListener);
+		hideAnimation.setAnimationListener(animationListener);
+	}
+	
+	protected void onAnimationTransfrom(int offset) {
+		titleLayout.setPadding(0, offset, 0, 0);
+	}
+	
+	//////////////////////
 
 	private class GetDataTask extends AsyncTask<Void, Void, String[]> {
 
@@ -144,7 +226,7 @@ public final class PullToRefreshListActivity extends ListActivity {
 		protected String[] doInBackground(Void... params) {
 			// Simulates a background job.
 			try {
-				Thread.sleep(4000);
+				Thread.sleep(2000);
 			} catch (InterruptedException e) {
 			}
 			return mStrings;
@@ -225,9 +307,24 @@ public final class PullToRefreshListActivity extends ListActivity {
 		return super.onOptionsItemSelected(item);
 	}
 
-	private String[] mStrings = { "Abbaye de Belloc", "Abbaye du Mont des Cats", "Abertam", "Abondance", "Ackawi",
+	private String[] mStrings = 
+		{ 
+			"Abbaye de Belloc", "Abbaye du Mont des Cats", "Abertam", "Abondance", "Ackawi",
 			"Acorn", "Adelost", "Affidelice au Chablis", "Afuega'l Pitu", "Airag", "Airedale", "Aisy Cendre",
 			"Allgauer Emmentaler", "Abbaye de Belloc", "Abbaye du Mont des Cats", "Abertam", "Abondance", "Ackawi",
 			"Acorn", "Adelost", "Affidelice au Chablis", "Afuega'l Pitu", "Airag", "Airedale", "Aisy Cendre",
-			"Allgauer Emmentaler" };
+			"Allgauer Emmentaler", "Abbaye de Belloc", "Abbaye du Mont des Cats", "Abertam", "Abondance", "Ackawi",
+			"Abbaye de Belloc", "Abbaye du Mont des Cats", "Abertam", "Abondance", "Ackawi",
+			"Acorn", "Adelost", "Affidelice au Chablis", "Afuega'l Pitu", "Airag", "Airedale", "Aisy Cendre",
+			"Allgauer Emmentaler", "Abbaye de Belloc", "Abbaye du Mont des Cats", "Abertam", "Abondance", "Ackawi",
+			"Abbaye de Belloc", "Abbaye du Mont des Cats", "Abertam", "Abondance", "Ackawi",
+			"Acorn", "Adelost", "Affidelice au Chablis", "Afuega'l Pitu", "Airag", "Airedale", "Aisy Cendre",
+			"Allgauer Emmentaler", "Abbaye de Belloc", "Abbaye du Mont des Cats", "Abertam", "Abondance", "Ackawi",
+			"Acorn", "Adelost", "Affidelice au Chablis", "Afuega'l Pitu", "Airag", "Airedale", "Aisy Cendre",
+			"Allgauer Emmentaler", "Abbaye de Belloc", "Abbaye du Mont des Cats", "Abertam", "Abondance", "Ackawi",
+			"Abbaye de Belloc", "Abbaye du Mont des Cats", "Abertam", "Abondance", "Ackawi",
+			"Acorn", "Adelost", "Affidelice au Chablis", "Afuega'l Pitu", "Airag", "Airedale", "Aisy Cendre",
+			"Allgauer Emmentaler", "Abbaye de Belloc", "Abbaye du Mont des Cats", "Abertam", "Abondance", "Ackawi",
+			"Allgauer Emmentaler" 
+		};
 }
